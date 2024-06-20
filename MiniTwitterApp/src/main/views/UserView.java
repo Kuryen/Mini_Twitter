@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import main.models.*;
 
-public class UserView extends JFrame {
+public class UserView extends JFrame implements Observer {
    private User currentUser;
    private DefaultListModel<String> followingListModel = new DefaultListModel<>();
    private DefaultListModel<String> newsFeedListModel = new DefaultListModel<>();
@@ -43,6 +43,8 @@ public class UserView extends JFrame {
       add(followingPanel, BorderLayout.NORTH);
       add(tweetPanel, BorderLayout.CENTER);
       add(newsFeedPanel, BorderLayout.SOUTH);
+
+      updateFollowingList(); // Initial update of the following list
    }
 
    private void postTweet() {
@@ -60,10 +62,11 @@ public class UserView extends JFrame {
       }
    }
 
+   @Override
    // This method should update asynchronously on the UI thread
-   public void updateNewsFeed(String tweet) {
+   public void update(String message) {
       SwingUtilities.invokeLater(() -> {
-         newsFeedListModel.addElement(tweet);
+         newsFeedListModel.addElement(message);
       });
    }
 }
