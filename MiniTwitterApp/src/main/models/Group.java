@@ -5,31 +5,46 @@ import java.util.List;
 
 public class Group implements Component {
    private String id;
-   private List<Component> members = new ArrayList<>();
+   private String name; // Store the group name
+   private List<Component> children = new ArrayList<>();
 
-   public Group(String id) {
+   public Group(String id, String name) {
       this.id = id;
+      this.name = name;
+   }
+
+   @Override
+   public String getId() {
+      return id;
+   }
+
+   public String getName() {
+      return name;
+   }
+
+   public void setName(String name) {
+      this.name = name;
    }
 
    @Override
    public void add(Component component) {
-   members.add(component);
+      children.add(component);
    }
 
    @Override
    public void remove(Component component) {
-   members.remove(component);
+      children.remove(component);
    }
 
    @Override
    public Component getChild(int i) {
-   return members.get(i);
+      return children.get(i);
    }
 
    // Method to retrieve all user instances from this group
     public List<User> getUsers() {
       List<User> users = new ArrayList<>();
-      for (Component member : members) {
+      for (Component member : children) {
          if (member instanceof User) {
                users.add((User) member);
          } else if (member instanceof Group) {
@@ -42,18 +57,13 @@ public class Group implements Component {
    @Override
    public void accept(Visitor visitor) {
       visitor.visit(this);  // Allow the visitor to perform operations specific to Group
-      for (Component component : getChildren()) {
+      for (Component component : children) {
          component.accept(visitor);  // Recursively accept visitors for all children
       }
    }
 
-   @Override
-   public String getId() {
-      return id;
-   }
-
    // Method to return all children, useful for UI operations
    public List<Component> getChildren() {
-      return new ArrayList<>(members);
+      return new ArrayList<>(children);
    }
 }

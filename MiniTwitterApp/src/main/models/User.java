@@ -23,6 +23,10 @@ public class User implements Component, Observer, Subject {
       return new ArrayList<>(followings); // Directly return followings as they are strings
    }
 
+   public List<String> getNewsFeed() {
+      return newsFeed;  // Return the list of news feed messages
+   }
+
    public void postTweet(String tweet) {
       tweets.add(tweet);
       notifyFollowers(tweet); // Notify followers about the tweet
