@@ -14,7 +14,7 @@ public class UserController {
 
    public void addUser(String userId) {
       User user = new User(userId);
-      model.add(user);  // Assuming add() updates the model
+      model.add(user);  // add() updates the model
       view.updateUserList(model.getUsers());  // Update view
    }
 }

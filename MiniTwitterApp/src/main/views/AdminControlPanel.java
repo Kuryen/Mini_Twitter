@@ -42,7 +42,7 @@ public class AdminControlPanel extends JFrame {
     private void initializeComponents() {
         // Setup the layout and the basic components for managing users/groups
         JSplitPane splitPane = new JSplitPane();
-        splitPane.setDividerLocation(300); // Adjust this value to set initial divider location
+        splitPane.setDividerLocation(300); // Adjust this value if needed
         splitPane.setLeftComponent(setupTree());
         splitPane.setRightComponent(setupManagementComponents());
         getContentPane().add(splitPane);
@@ -63,7 +63,6 @@ public class AdminControlPanel extends JFrame {
         Object nodeInfo = rootNode.getUserObject();
         if (nodeInfo instanceof Group) {
             Group group = (Group) nodeInfo;
-            // proceed with your action
             JOptionPane.showMessageDialog(this, "Group ID: " + group.getId() + "\nGroup Name: " + group.getName(), "Group Details", JOptionPane.INFORMATION_MESSAGE);
         } else {
             JOptionPane.showMessageDialog(this, "Invalid object type.", "Error", JOptionPane.ERROR_MESSAGE);

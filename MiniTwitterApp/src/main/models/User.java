@@ -61,7 +61,7 @@ public class User implements Component, Observer, Subject {
    public void addFollower(User follower) {
       if (!followers.contains(follower)) {
          followers.add(follower);
-         follower.followings.add(this.id); // Add this user to the follower's followings list
+         followings.add(this.id); // Add this user to the follower's followings list
       }
    }
 

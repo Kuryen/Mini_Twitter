@@ -68,7 +68,7 @@ public class UserView extends JFrame implements Observer {
    private void followUser() {
       String userIdToFollow = userIdTextArea.getText().trim();
       if (!userIdToFollow.isEmpty()) {
-         User userToFollow = UserStorage.getUserById(userIdToFollow); // Replace with actual method to get a user by ID
+         User userToFollow = UserStorage.getUserById(userIdToFollow);
          if (userToFollow != null) {
             currentUser.addFollower(userToFollow);
             userToFollow.attach(this); // Attach this view to the followed user to receive updates
@@ -102,7 +102,7 @@ public class UserView extends JFrame implements Observer {
       });
    }
 
-   // Dummy UserStorage class to simulate user retrieval
+   // UserStorage class to simulate user retrieval
    static class UserStorage {
       private static Map<String, User> userMap = new HashMap<>();
 
