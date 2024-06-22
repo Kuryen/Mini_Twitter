@@ -159,7 +159,7 @@ public class AdminControlPanel extends JFrame {
 
         viewUserButton.addActionListener(e -> {
             if (currentUser != null) {
-                new UserView(currentUser).setVisible(true); // Open UserView for the selected user
+                openUserView(currentUser);
             } else {
                 JOptionPane.showMessageDialog(this, "No user selected.", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -195,6 +195,11 @@ public class AdminControlPanel extends JFrame {
 
         analyticsButton.addActionListener(e -> performAnalytics());
         return controlPanel;
+    }
+
+    private void openUserView(User user) {
+        UserView userView = new UserView(user);
+        userView.setVisible(true);
     }
 
     private void addUser(String userId, Group group) {
