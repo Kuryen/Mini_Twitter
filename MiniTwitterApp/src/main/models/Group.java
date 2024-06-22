@@ -66,4 +66,9 @@ public class Group implements Component {
    public List<Component> getChildren() {
       return new ArrayList<>(children);
    }
+
+   @Override
+   public String toString() {
+      return "Group: " + name; // Display the group name in the tree
+   }
 }

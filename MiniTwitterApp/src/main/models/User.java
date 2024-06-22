@@ -3,12 +3,14 @@ package main.models;
 import java.util.ArrayList;
 import java.util.List;
 
+import main.views.UserView;
+
 public class User implements Component, Observer, Subject {
    private String id; // Unique identifier for the user
    private List<String> tweets = new ArrayList<>();
    private List<User> followers = new ArrayList<>();
    private List<String> followings = new ArrayList<>(); // List to store the IDs of users this user is following
-   private List<Observer> observers = new ArrayList<>();
+   private List<Observer> observerList = new ArrayList<>();
    private List<String> newsFeed = new ArrayList<>();
 
    public User(String id) {
@@ -20,11 +22,11 @@ public class User implements Component, Observer, Subject {
    }
 
    public List<String> getFollowings() {
-      return new ArrayList<>(followings); // Directly return followings as they are strings
+      return new ArrayList<>(followings); // Return a copy of the followings list
    }
 
    public List<String> getNewsFeed() {
-      return newsFeed;  // Return the list of news feed messages
+      return new ArrayList<>(newsFeed); // Return a copy of the news feed
    }
 
    public void postTweet(String tweet) {
@@ -35,32 +37,41 @@ public class User implements Component, Observer, Subject {
 
    private void notifyFollowers(String tweet) {
       for (User follower : followers) {
-         follower.update("Tweet from " + this.id + ": " + tweet); // Call update directly if followers are also observers
+         follower.receiveTweet(this.id, tweet);
       }
    }
 
-   public void addObserver(Observer  observer) {
-      if (!observers.contains(observer)) {
-         observers.add(observer);
+   public void addObserver(UserView observer) {
+      if (!observerList.contains(observer)) {
+         observerList.add(observer);
       }
    }
 
    // Subject interface methods
    @Override
-   public void attach(Observer observer) {
-      if (!observers.contains(observer)) {
-         observers.add(observer);
-      }
+   public void attach(Observer o) {
+      if (!observerList.contains(o)) observerList.add(o);
    }
 
    @Override
-   public void detach(Observer observer) {
-      observers.remove(observer);
+   public void detach(Observer o) {
+      observerList.remove(o);
    }
 
-   public void notifyObservers(String message) {
-      for (Observer observer : observers) {
-         observer.update(message);
+   public void addFollower(User follower) {
+      if (!followers.contains(follower)) {
+         followers.add(follower);
+         follower.followings.add(this.id); // Add this user to the follower's followings list
+      }
+   }
+
+   public void receiveTweet(String userId, String tweet) {
+      newsFeed.add("Tweet from " + userId + ": " + tweet);
+   }
+
+   public void notifyObservers(String tweet) {
+      for (Observer observer : observerList) {
+         observer.update("Tweet from " + id + ": " + tweet);
       }
    }
 
@@ -72,6 +83,11 @@ public class User implements Component, Observer, Subject {
 
    public void accept(Visitor visitor) {
       visitor.visit(this);  // Calls visit method for a User object
+   }
+
+   @Override
+   public String toString() {
+      return "User ID: " + id; // Customize as needed for display in GUI or logs
    }
 
    // Component interface methods

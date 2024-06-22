@@ -20,28 +20,15 @@ public class AdminControlPanel extends JFrame {
     private JTextField userIdTextField;
     private JTextField groupIdTextField;
     private DefaultListModel<String> userModel = new DefaultListModel<>();
-    private JList<String> userList = new JList<>(userModel);
-    private JButton analyticsButton;
     private User currentUser;
     private Group currentGroup;
 
     // Private constructor to prevent instantiation outside this class
     private AdminControlPanel() {
         setTitle("Admin Control Panel");
-        setSize(600, 400);
+        setSize(800, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         initializeComponents();
-    }
-
-    private DefaultMutableTreeNode findNodeForGroup(Group group) {
-        Enumeration<?> enumeration = rootNode.breadthFirstEnumeration();
-        while (enumeration.hasMoreElements()) {
-            DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
-            if (currentNode.getUserObject() instanceof Group && currentNode.getUserObject().equals(group)) {
-                return currentNode;
-            }
-        }
-        return null; // Return null if no node is found
     }
 
     // Singleton pattern to ensure only one instance of this panel
@@ -54,21 +41,22 @@ public class AdminControlPanel extends JFrame {
 
     private void initializeComponents() {
         // Setup the layout and the basic components for managing users/groups
-        setupTree();
-        setupManagementComponents();
-        setupButtons();  // Ensure this method sets up all your buttons and their listeners
+        JSplitPane splitPane = new JSplitPane();
+        splitPane.setDividerLocation(300); // Adjust this value to set initial divider location
+        splitPane.setLeftComponent(setupTree());
+        splitPane.setRightComponent(setupManagementComponents());
+        getContentPane().add(splitPane);
     }
 
-    private void setupTree() {
-        Group rootGroup = new Group("root", "Root Group");
-        rootNode = new DefaultMutableTreeNode(rootGroup);
+    private JScrollPane setupTree() {
+        rootNode = new DefaultMutableTreeNode(new Group("root", "Root Group"));
         treeModel = new DefaultTreeModel(rootNode);
         tree = new JTree(treeModel);
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
         JScrollPane treeScrollPane = new JScrollPane(tree);
         treeScrollPane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        getContentPane().add(treeScrollPane, BorderLayout.CENTER);
         setupTreeSelectionListener();
+        return treeScrollPane;
     }
 
     public void actionPerformed(ActionEvent e) {
@@ -87,27 +75,36 @@ public class AdminControlPanel extends JFrame {
             DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
             if (selectedNode != null) {
                 Object userObject = selectedNode.getUserObject();
-                if (userObject instanceof Group) {
+                if (userObject instanceof User) {
+                    currentUser = (User) userObject;
+                    currentGroup = (Group) ((DefaultMutableTreeNode) selectedNode.getParent()).getUserObject();
+                } else if (userObject instanceof Group) {
+                    currentUser = null;
                     currentGroup = (Group) userObject;
-                    updateUserList(currentGroup.getUsers());
                 } else {
-                    userList.setModel(new DefaultListModel<>()); // Clear the list if no group is selected
+                    currentUser = null;
+                    currentGroup = null;
                 }
-                currentUser = null; // Reset currentUser if it's not a user selection
             }
         });
     }
 
-    private void setupManagementComponents() {
+    private JPanel setupManagementComponents() {
         JPanel controlPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         userIdTextField = new JTextField(10);
         JButton addUserButton = new JButton("Add User");
         groupIdTextField = new JTextField(10);
         JButton addGroupButton = new JButton("Add Group");
-        analyticsButton = new JButton("Show Analytics");
+        
+        JButton viewUserButton = new JButton("View User");
+        JButton analyticsButton = new JButton("Show Analytics");
+        JButton updateGroupButton = new JButton("Update Group");
+        JButton removeUserButton = new JButton("Remove User");
+        JButton removeGroupButton = new JButton("Remove Group");
 
         gbc.gridx = 0; gbc.gridy = 0;
         controlPanel.add(new JLabel("User ID: "), gbc);
@@ -125,19 +122,57 @@ public class AdminControlPanel extends JFrame {
 
         gbc.gridx = 0;
         gbc.gridy = 3;
-        gbc.gridwidth = 3; // Span across all columns
+        gbc.gridwidth = 3;
+        controlPanel.add(viewUserButton, gbc);
+
+        gbc.gridy = 4;
         controlPanel.add(analyticsButton, gbc);
 
-        getContentPane().add(controlPanel, BorderLayout.SOUTH);
+        gbc.gridy = 5;
+        controlPanel.add(updateGroupButton, gbc);
 
-        addUserButton.addActionListener(e -> handleAddUser());
-        addGroupButton.addActionListener(e -> handleAddGroup());
-        analyticsButton.addActionListener(e -> performAnalytics());
-    }
+        gbc.gridy = 6;
+        controlPanel.add(removeUserButton, gbc);
 
-    private void setupButtons() {
-        JButton removeUserButton = new JButton("Remove User");
-        JButton updateGroupButton = new JButton("Update Group");
+        gbc.gridy = 7;
+        controlPanel.add(removeGroupButton, gbc);
+
+        // Listeners for the buttons
+        addUserButton.addActionListener(e -> {
+            String userId = userIdTextField.getText().trim();
+            if (currentGroup != null && !userId.isEmpty() && !groupContainsUser(currentGroup, userId)) {
+                addUser(userId, currentGroup);
+                userIdTextField.setText("");
+            } else {
+                JOptionPane.showMessageDialog(this, "User ID already exists or no group selected.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        addGroupButton.addActionListener(e -> {
+            String groupId = groupIdTextField.getText().trim();
+            if (currentGroup != null && !groupId.isEmpty() && !groupContainsGroup(currentGroup, groupId)) {
+                addGroup(groupId, currentGroup);
+                groupIdTextField.setText("");
+            } else {
+                JOptionPane.showMessageDialog(this, "Group ID already exists or no parent group selected.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        viewUserButton.addActionListener(e -> {
+            if (currentUser != null) {
+                new UserView(currentUser).setVisible(true); // Open UserView for the selected user
+            } else {
+                JOptionPane.showMessageDialog(this, "No user selected.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        updateGroupButton.addActionListener(e -> { // Add action listener for update group button
+            if (currentGroup != null) {
+                updateGroupDetails(currentGroup);
+            } else {
+                JOptionPane.showMessageDialog(this, "No group selected.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         removeUserButton.addActionListener(e -> {
             if (currentUser != null && currentGroup != null) {
@@ -149,49 +184,30 @@ public class AdminControlPanel extends JFrame {
             }
         });
 
-        updateGroupButton.addActionListener(e -> {
+        removeGroupButton.addActionListener(e -> {
             if (currentGroup != null) {
-                String newName = JOptionPane.showInputDialog(this, "Enter new group name:", currentGroup.getName());
-                if (newName != null && !newName.trim().isEmpty()) {
-                    currentGroup.setName(newName);
-                    updateTree();
-                }
+                removeGroup(currentGroup);
+                updateTree();
+                currentGroup = null;  // Optionally reset the current group
             } else {
                 JOptionPane.showMessageDialog(this, "No group selected.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
+
+        analyticsButton.addActionListener(e -> performAnalytics());
+        return controlPanel;
     }
 
-    private void handleAddUser() {
-        String userId = userIdTextField.getText().trim();
-        if (!userId.isEmpty() && !groupContainsUser((Group) rootNode.getUserObject(), userId)) {
-            addUser(userId, (Group) rootNode.getUserObject());
-            userIdTextField.setText("");
-        } else {
-            JOptionPane.showMessageDialog(this, "User ID already exists or is empty.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void handleAddGroup() {
-        String groupId = groupIdTextField.getText().trim();
-        if (!groupId.isEmpty() && !groupContainsGroup((Group) rootNode.getUserObject(), groupId)) {
-            addGroup(groupId, (Group) rootNode.getUserObject());
-            groupIdTextField.setText("");
-        } else {
-            JOptionPane.showMessageDialog(this, "Group ID already exists or is empty.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void addUser(String userId, Group parentGroup) {
-        if (!groupContainsUser(parentGroup, userId)) {
+    private void addUser(String userId, Group group) {
+        if (!groupContainsUser(group, userId)) {
             User newUser = new User(userId);
-            parentGroup.add(newUser);
-            updateTree();
-            DefaultMutableTreeNode groupNode = findNodeForGroup(parentGroup);
+            group.add(newUser);
+            UserView.UserStorage.addUser(newUser); // Add user to storage
+            DefaultMutableTreeNode groupNode = findNodeForGroup(group);
             if (groupNode != null) {
                 DefaultMutableTreeNode newUserNode = new DefaultMutableTreeNode(newUser);
                 groupNode.add(newUserNode);
-                treeModel.nodesWereInserted(groupNode, new int[]{groupNode.getIndex(newUserNode)});
+                treeModel.reload(groupNode); // Refresh the specific part of the tree
                 selectAndScrollToNode(newUserNode);
             } else {
                 JOptionPane.showMessageDialog(this, "Group node not found.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -201,11 +217,24 @@ public class AdminControlPanel extends JFrame {
         }
     }
 
+    private void removeUser(User user, Group group) {
+        if (group != null && user != null) {
+            group.remove(user);
+            DefaultMutableTreeNode userNode = findNodeForUser(user);
+            if (userNode != null) {
+                ((DefaultMutableTreeNode) userNode.getParent()).remove(userNode);
+                treeModel.reload(rootNode);
+                JOptionPane.showMessageDialog(this, "User removed successfully.");
+            } else {
+                JOptionPane.showMessageDialog(this, "User node not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void addGroup(String groupId, Group parentGroup) {
         if (!groupContainsGroup(parentGroup, groupId)) {
-            Group newGroup = new Group(groupId, groupId);
+            Group newGroup = new Group(groupId, groupId); // Passing groupId as both id and name for simplicity
             parentGroup.add(newGroup);
-            updateTree();
             DefaultMutableTreeNode parentNode = findNodeForGroup(parentGroup);
             if (parentNode != null) {
                 DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(newGroup);
@@ -220,29 +249,66 @@ public class AdminControlPanel extends JFrame {
         }
     }
 
-    private void removeUser(User user, Group group) {
-        if (group != null && user != null) {
-            group.remove(user);
-            updateTree();
-            JOptionPane.showMessageDialog(this, "User removed successfully.");
+    private void removeGroup(Group group) {
+        if (group != null) {
+            Group parentGroup = findParentGroup(rootNode, group);
+            if (parentGroup != null) {
+                parentGroup.remove(group);
+                DefaultMutableTreeNode groupNode = findNodeForGroup(group);
+                if (groupNode != null) {
+                    ((DefaultMutableTreeNode) groupNode.getParent()).remove(groupNode);
+                    treeModel.reload(rootNode);
+                    JOptionPane.showMessageDialog(this, "Group removed successfully.");
+                }
+            }
+        }
+    }
+
+    private Group findParentGroup(DefaultMutableTreeNode node, Group group) {
+        if (node.getUserObject() instanceof Group && ((Group) node.getUserObject()).getChildren().contains(group)) {
+            return (Group) node.getUserObject();
+        }
+
+        Enumeration<TreeNode> children = node.children();
+        while (children.hasMoreElements()) {
+            TreeNode child = children.nextElement();
+            Group result = findParentGroup((DefaultMutableTreeNode) child, group);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    private void updateGroupDetails(Group group) {
+        if (group != null) {
+            // Brings up a dialog to edit details like group name
+            String newName = JOptionPane.showInputDialog(this, "Enter new group name:", group.getName());
+            if (newName != null && !newName.isEmpty()) {
+                group.setName(newName);
+                updateTree();
+                JOptionPane.showMessageDialog(this, "Group details updated successfully.");
+            }
         }
     }
 
     private void performAnalytics() {
         // Assuming `Group` and `User` classes have methods to accept and process a visitor
-        if (currentGroup != null) {
+        Object userObject = rootNode.getUserObject();
+        if (userObject instanceof Group) {
             AnalyticsVisitor visitor = new AnalyticsVisitor();
-            currentGroup.accept(visitor); // Ensure your Group class implements the accept method for visitor
-
-            String message = String.format("Total Users: %d\nTotal Groups: %d\nTotal Tweets: %d\nPositive Tweets: %.2f%%",
-                                           visitor.getUserCount(), visitor.getGroupCount(),
-                                           visitor.getTweetCount(), visitor.getPositiveTweetPercentage());
-
+        ((Group) userObject).accept(visitor); // Cast to Group if you're sure about the type
+            
+            String message = "Total Users: " + visitor.getUserCount() + 
+                            "\nTotal Groups: " + visitor.getGroupCount() + 
+                            "\nTotal Tweets: " + visitor.getTweetCount() + 
+                            "\nPositive Tweets: " + String.format("%.2f%%", visitor.getPositiveTweetPercentage());
+            
             JOptionPane.showMessageDialog(this, message, "Analytics Summary", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(this, "Error: Root is not a group or no group selected.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error: Root is not a group.", "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }   
+    }
 
     private boolean groupContainsUser(Group group, String userId) {
         return group.getChildren().stream()
@@ -272,12 +338,34 @@ public class AdminControlPanel extends JFrame {
 
     private void addGroupNodes(Group group, DefaultMutableTreeNode node) {
         for (Component member : group.getChildren()) {
-            DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(member.getId());
+            DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(member);
             node.add(childNode);
             if (member instanceof Group) {
                 addGroupNodes((Group) member, childNode);
             }
         }
+    }
+
+    private DefaultMutableTreeNode findNodeForUser(User user) {
+        Enumeration<?> enumeration = rootNode.breadthFirstEnumeration();
+        while (enumeration.hasMoreElements()) {
+            DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
+            if (currentNode.getUserObject() instanceof User && ((User) currentNode.getUserObject()).getId().equals(user.getId())) {
+                return currentNode;
+            }
+        }
+        return null; // Return null if no node is found
+    }
+
+    private DefaultMutableTreeNode findNodeForGroup(Group group) {
+        Enumeration<?> enumeration = rootNode.breadthFirstEnumeration();
+        while (enumeration.hasMoreElements()) {
+            DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
+            if (currentNode.getUserObject() instanceof Group && ((Group) currentNode.getUserObject()).getId().equals(group.getId())) {
+                return currentNode;
+            }
+        }
+        return null; // Return null if no node is found
     }
 
     private void selectAndScrollToNode(Object identifier) {
